@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>stc Buildings Inspection</title>
+<style>
+  :root{
+    --purple-950:#2A0F45;
+    --purple-800:#3D1A5B;
+    --purple-700:#4C2172;
+    --magenta:#E31C79;
+    --magenta-dim:#F7D9E8;
+    --paper:#FAF8FC;
+    --card:#FFFFFF;
+    --ink:#211A2B;
+    --ink-dim:#6C6478;
+    --line:#E7E1EE;
+    --ok:#1E8E5A;
+    --ok-bg:#E6F4EC;
+    --bad:#D64545;
+    --bad-bg:#FCE9E9;
+    --na:#8A8294;
+    --na-bg:#EFEDF2;
+    --warn:#C9820F;
+    --warn-bg:#FBF0DD;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  button{font-family:inherit;}
+  input,textarea{font-family:inherit;}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    background:linear-gradient(135deg,var(--purple-950),var(--purple-800) 60%,var(--magenta));
+    color:#fff; padding:14px 16px 16px;
+    box-shadow:0 4px 14px rgba(42,15,69,.25);
+  }
+  .topbar-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .brand{display:flex; flex-direction:column; line-height:1.1;}
+  .brand .eyebrow{font-size:11px; letter-spacing:.12em; text-transform:uppercase; opacity:.75; font-weight:600;}
+  .brand h1{font-size:17px; margin:2px 0 0; font-weight:800; letter-spacing:.01em;}
+  .ring-wrap{position:relative; width:46px; height:46px; flex:0 0 auto;}
+  .ring-wrap svg{transform:rotate(-90deg);}
+  .ring-bg{fill:none; stroke:rgba(255,255,255,.22); stroke-width:4;}
+  .ring-fg{fill:none; stroke:#fff; stroke-width:4; stroke-linecap:round; transition:stroke-dasharray .3s ease;}
+  .ring-label{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:800;}
+  .meta-row{display:flex; gap:8px; margin-top:12px; overflow-x:auto; padding-bottom:2px;}
+  .meta-field{flex:1 1 0; min-width:120px;}
+  .meta-field label{display:block; font-size:10px; text-transform:uppercase; letter-spacing:.08em; opacity:.75; margin-bottom:3px; font-weight:700;}
+  .meta-field input{
+    width:100%; padding:9px 10px; border-radius:9px; border:1px solid rgba(255,255,255,.35);
+    background:rgba(255,255,255,.12); color:#fff; font-size:14px; font-weight:600;
+  }
+  .meta-field input::placeholder{color:rgba(255,255,255,.6); font-weight:500;}
+  .meta-field input:focus{outline:2px solid #fff; background:rgba(255,255,255,.2);}
+
+  /* ---------- layout ---------- */
+  .wrap{max-width:640px; margin:0 auto; padding:14px 12px 120px;}
+  .toolrow{display:flex; gap:8px; margin:12px 2px 14px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px;}
+  .toolrow .pillbtn{flex:0 0 auto; white-space:nowrap;}
+  .pillbtn{
+    flex:1; border:none; border-radius:999px; padding:10px 12px; font-size:13px; font-weight:700;
+    background:var(--card); color:var(--purple-800); border:1px solid var(--line); cursor:pointer;
+  }
+  .pillbtn.active{background:var(--purple-800); color:#fff; border-color:var(--purple-800);}
+
+  .section{background:var(--card); border:1px solid var(--line); border-radius:16px; margin-bottom:12px; overflow:hidden;}
+  .section-head{
+    display:flex; align-items:center; gap:10px; width:100%; padding:14px 14px;
+    background:#fff; border:none; text-align:left; cursor:pointer;
+  }
+  .sec-num{
+    flex:0 0 auto; width:28px; height:28px; border-radius:8px; background:var(--purple-800); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;
+  }
+  .sec-title{flex:1; font-weight:800; font-size:15px;}
+  .sec-progress{font-size:12px; color:var(--ink-dim); font-weight:700;}
+  .sec-chevron{transition:transform .2s ease; color:var(--ink-dim);}
+  .section.open .sec-chevron{transform:rotate(180deg);}
+  .sec-dot{width:9px; height:9px; border-radius:50%; flex:0 0 auto;}
+  .dot-ok{background:var(--ok);} .dot-bad{background:var(--bad);} .dot-pending{background:#D8D2E2;}
+
+  .sec-body{max-height:0; overflow:hidden; transition:max-height .25s ease;}
+  .section.open .sec-body{max-height:none;}
+
+  .item{padding:14px; border-top:1px solid var(--line);}
+  .item-top{display:flex; gap:10px; align-items:flex-start;}
+  .item-ref{flex:0 0 auto; font-size:11px; font-weight:800; color:#fff; background:var(--magenta);
+    border-radius:6px; padding:3px 6px; margin-top:1px;}
+  .item-text{flex:1; font-size:14.5px; line-height:1.35; font-weight:600;}
+
+  .seg{display:flex; gap:6px; margin-top:10px;}
+  .seg button{
+    flex:1; padding:9px 0; border-radius:10px; border:1.5px solid var(--line); background:#fff;
+    font-weight:800; font-size:13px; color:var(--ink-dim); cursor:pointer;
+  }
+  .seg button.y.sel{background:var(--ok-bg); border-color:var(--ok); color:var(--ok);}
+  .seg button.n.sel{background:var(--bad-bg); border-color:var(--bad); color:var(--bad);}
+  .seg button.na.sel{background:var(--na-bg); border-color:var(--na); color:var(--na);}
+
+  .risk-row{display:flex; align-items:center; gap:8px; margin-top:10px;}
+  .risk-row label{font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.05em;}
+  .risk-select{
+    flex:1; padding:7px 8px; border-radius:8px; border:1px solid var(--line); font-size:13px; font-weight:700; background:#fff;
+  }
+  .risk-select.r-none{color:var(--na);}
+  .risk-select.r-low{color:var(--ok);}
+  .risk-select.r-medium{color:var(--warn);}
+  .risk-select.r-high{color:var(--bad);}
+
+  .subrow{display:flex; gap:8px; margin-top:10px;}
+  .ghostbtn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:9px 8px; border-radius:10px; border:1.5px dashed var(--line); background:#fcfbfd;
+    font-size:12.5px; font-weight:700; color:var(--purple-800); cursor:pointer;
+  }
+  .photo-native-wrap{margin-top:10px; border:1.5px dashed var(--line); border-radius:10px; background:#fcfbfd; overflow:hidden;}
+  .photo-native-label{padding:8px 10px 0; font-size:12.5px; font-weight:700; color:var(--purple-800);}
+  .photo-native-input{
+    display:block; width:100%; padding:8px 10px 10px; border:none; background:transparent;
+    font-size:12.5px; color:var(--ink-dim); box-sizing:border-box;
+  }
+  textarea.comment{
+    width:100%; margin-top:10px; border:1px solid var(--line); border-radius:10px; padding:9px 10px;
+    font-size:13.5px; resize:vertical; min-height:38px; display:none; background:#fcfbfd;
+  }
+  textarea.comment.show{display:block;}
+
+  .photo-strip{display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;}
+  .photo-thumb{position:relative; width:96px; height:96px; border-radius:12px; overflow:hidden; border:1px solid var(--line); box-shadow:0 2px 6px rgba(42,15,69,.10);}
+  .photo-thumb img{width:100%; height:100%; object-fit:cover; display:block; cursor:pointer;}
+  .photo-thumb .rm{
+    position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%;
+    background:rgba(0,0,0,.6); color:#fff; border:none; font-size:12px; line-height:22px; text-align:center; padding:0; cursor:pointer;
+  }
+
+  /* ---------- bottom bar ---------- */
+  .bottombar{
+    position:fixed; left:0; right:0; bottom:0; z-index:50;
+    background:#fff; border-top:1px solid var(--line);
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+    display:flex; gap:10px; box-shadow:0 -6px 18px rgba(42,15,69,.08);
+  }
+  .bottombar .stat{flex:1; display:flex; flex-direction:column; justify-content:center;}
+  .bottombar .stat b{font-size:15px;}
+  .bottombar .stat span{font-size:11px; color:var(--ink-dim); font-weight:600;}
+  .btn-primary{
+    background:var(--magenta); color:#fff; border:none; border-radius:12px; padding:0 20px;
+    font-weight:800; font-size:14px; cursor:pointer;
+  }
+  .btn-secondary{
+    background:#fff; color:var(--purple-800); border:1.5px solid var(--purple-800); border-radius:12px; padding:0 16px;
+    font-weight:800; font-size:14px; cursor:pointer;
+  }
+
+  /* ---------- review / print view : stc report format ---------- */
+  #reviewOverlay{position:fixed; inset:0; background:#DCD6E4; z-index:100; overflow:auto; display:none;}
+  #reviewOverlay.show{display:block;}
+  .review-head{background:linear-gradient(135deg,var(--purple-950),var(--purple-800)); color:#fff; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:5;}
+  .review-head h2{margin:0; font-size:15px;}
+  .closebtn{background:rgba(255,255,255,.15); border:none; color:#fff; width:32px; height:32px; border-radius:50%; font-size:16px; cursor:pointer; flex:0 0 auto;}
+  .review-body{max-width:760px; margin:0 auto; padding:14px 10px 24px;}
+
+  .rpt-sheet{background:#fff; border-radius:2px; overflow:hidden; box-shadow:0 6px 22px rgba(42,15,69,.18); margin-bottom:16px;}
+  .rpt-banner{display:flex; align-items:stretch; min-height:64px;}
+  .rpt-banner-left{flex:1; background:var(--purple-800); display:flex; align-items:center; padding:12px 16px;}
+  .rpt-banner-left h1{color:#fff; font-size:16px; margin:0; letter-spacing:.03em; font-weight:800;}
+  .rpt-banner-mid{width:14px; background:linear-gradient(90deg,var(--purple-800),var(--magenta));}
+  .rpt-banner-right{width:130px; background:#fff; display:flex; align-items:center; justify-content:center; padding:10px;}
+  .rpt-logo-img{max-width:100px; max-height:44px; display:block;}
+
+  .rpt-info{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .rpt-info td{border:1px solid #D8D2E2; padding:8px 10px; vertical-align:top;}
+  .rpt-info td.lbl{background:#F1EDF6; font-weight:800; width:23%; color:var(--purple-800);}
+  .rpt-info td.val{width:27%; font-weight:600;}
+
+  table.rpt-table{width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed;}
+  table.rpt-table col.c-ref{width:32px;}
+  table.rpt-table col.c-desc{width:auto;}
+  table.rpt-table col.c-flag{width:26px;}
+  table.rpt-table col.c-risk{width:58px;}
+  table.rpt-table col.c-dept{width:90px;}
+  table.rpt-table col.c-comment{width:20%;}
+  .rpt-sec-row td{background:var(--purple-800); color:#fff; font-weight:800; font-size:12.5px; padding:7px 10px;}
+  .rpt-head-row td{background:#EDE7F4; color:var(--purple-800); font-weight:800; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; padding:5px 4px; text-align:center; border:1px solid #D8D2E2;}
+  .rpt-head-row td.desc-h{text-align:left; padding-left:8px;}
+  table.rpt-table td{border:1px solid #E3DEEC; padding:6px 5px; vertical-align:top; word-wrap:break-word;}
+  td.rpt-ref{text-align:center; font-weight:700; color:var(--purple-800);}
+  td.rpt-desc{line-height:1.35;}
+  td.rpt-flag{text-align:center;}
+  .flagmark{display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:3px; font-size:11px; font-weight:900;}
+  .flagmark.on-y{background:var(--ok-bg); color:var(--ok); border:1px solid var(--ok);}
+  .flagmark.on-n{background:var(--bad-bg); color:var(--bad); border:1px solid var(--bad);}
+  .flagmark.on-na{background:var(--na-bg); color:var(--na); border:1px solid var(--na);}
+  td.rpt-risk{text-align:center; font-weight:800; font-size:11px;}
+  td.rpt-risk.risk-None{color:var(--na);}
+  td.rpt-risk.risk-Low{color:var(--ok);}
+  td.rpt-risk.risk-Medium{color:var(--warn);}
+  td.rpt-risk.risk-High{color:var(--bad);}
+  td.rpt-dept{text-align:center; font-weight:700; font-size:10.5px; color:var(--purple-800);}
+  td.rpt-comment{font-size:11.5px; color:var(--ink-dim);}
+
+  .rpt-photos-row td{padding:8px 10px 12px; background:#FBFAFC;}
+  .rpt-photos{display:flex; flex-wrap:wrap; gap:10px;}
+  .rpt-photo-block{width:230px;}
+  .rpt-photo-block img{width:230px; height:230px; object-fit:cover; border-radius:8px; border:1px solid #D8D2E2; display:block; cursor:pointer;}
+  .rpt-photo-block span{display:block; font-size:11px; color:var(--ink-dim); margin-top:4px; text-align:center; font-weight:600;}
+
+  .rpt-footer{padding:10px 14px; text-align:center; font-size:10.5px; color:var(--ink-dim); border-top:1px solid #E3DEEC;}
+
+  .rpt-appendix-title{background:var(--purple-800); color:#fff; font-weight:800; font-size:13.5px; padding:10px 14px;}
+  .rpt-appendix-grid{display:flex; flex-wrap:wrap; gap:14px; padding:16px;}
+  .rpt-appx-block{width:260px;}
+  .rpt-appx-block img{width:260px; height:260px; object-fit:cover; border-radius:10px; border:1px solid #D8D2E2; display:block; cursor:pointer; box-shadow:0 2px 8px rgba(42,15,69,.08);}
+  .rpt-appx-block .cap{font-size:13.5px; font-weight:800; color:var(--purple-800); margin-top:6px;}
+  .rpt-appx-block .cmt{font-size:11px; color:var(--ink); margin-top:4px; font-style:italic; line-height:1.35; background:#F1EDF6; border-radius:6px; padding:5px 7px;}
+
+  .rv-stats{display:flex; gap:10px; margin-bottom:14px;}
+  .rv-help-note{
+    background:#F1EDF6; border:1px solid #D8D2E2; border-radius:10px; padding:10px 12px;
+    font-size:12.5px; color:var(--ink-dim); line-height:1.5; margin:14px 2px 4px;
+  }
+  .rv-help-note b{color:var(--purple-800);}
+  .rv-stat-card{flex:1; background:#fff; border-radius:12px; padding:12px; text-align:center; box-shadow:0 2px 8px rgba(42,15,69,.08);}
+  .rv-stat-card b{font-size:20px; display:block;}
+  .rv-stat-card span{font-size:11px; color:var(--ink-dim); font-weight:700;}
+
+  .rv-actions{display:flex; flex-wrap:wrap; gap:10px; padding:4px 2px 24px;}
+  .rv-actions button{min-width:130px;}
+
+  @media (max-width:600px){
+    .rpt-sheet{overflow-x:auto;}
+    table.rpt-table{min-width:640px;}
+  }
+
+  @media print{
+    .topbar,.bottombar,.closebtn,.rv-actions,.review-head,.rv-help-note{display:none !important;}
+    #reviewOverlay{position:static; overflow:visible; background:#fff;}
+    .review-body{padding:0; max-width:100%;}
+    body{background:#fff;}
+    .rpt-sheet{box-shadow:none; margin-bottom:0; page-break-after:always;}
+    table.rpt-table{min-width:0;}
+    .rpt-sec-row, tr{page-break-inside:avoid;}
+    .rpt-photos-row{page-break-inside:avoid;}
+    .rpt-appx-block{width:160px; page-break-inside:avoid;}
+    .rpt-appx-block img{width:160px; height:160px;}
+    .rpt-photo-block{width:160px;}
+    .rpt-photo-block img{width:160px; height:160px;}
+    * { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
+  }
+
+  .toast{
+    position:fixed; bottom:82px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff;
+    padding:9px 16px; border-radius:999px; font-size:13px; font-weight:600; z-index:200; opacity:0; pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .toast.show{opacity:1;}
+
+  /* ---------- lightbox ---------- */
+  #lightbox{position:fixed; inset:0; background:rgba(20,10,32,.94); z-index:300; display:none; align-items:center; justify-content:center; flex-direction:column; padding:20px;}
+  #lightbox.show{display:flex;}
+  #lightbox img{max-width:100%; max-height:80vh; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,.5);}
+  #lightbox .lb-cap{color:#fff; font-size:13px; font-weight:700; margin-top:14px;}
+  #lightbox .lb-close{
+    position:absolute; top:18px; right:18px; width:38px; height:38px; border-radius:50%;
+    background:rgba(255,255,255,.15); color:#fff; border:none; font-size:18px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<noscript>
+  <div style="background:#D64545;color:#fff;padding:16px;font-family:sans-serif;font-size:14px;text-align:center;">
+    This checklist needs JavaScript to load. Please open this file in Safari or Chrome (tap Share → Open in Browser) instead of a quick preview.
+  </div>
+</noscript>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div class="brand">
+      <div class="eyebrow">stc &middot; Safety Management</div>
+      <h1>Buildings Inspection</h1>
+    </div>
+    <div class="ring-wrap">
+      <svg width="46" height="46" viewBox="0 0 46 46">
+        <circle class="ring-bg" cx="23" cy="23" r="19"></circle>
+        <circle class="ring-fg" id="ringFg" cx="23" cy="23" r="19" stroke-dasharray="0 119"></circle>
+      </svg>
+      <div class="ring-label" id="ringLabel">0%</div>
+    </div>
+  </div>
+  <div class="meta-row">
+    <div class="meta-field"><label>Building No.</label><input id="m-building" placeholder="e.g. A7"></div>
+    <div class="meta-field"><label>Inspector</label><input id="m-inspector" placeholder="Full name"></div>
+    <div class="meta-field"><label>Ref No.</label><input id="m-ref" placeholder="Auto or manual"></div>
+    <div class="meta-field"><label>Date</label><input id="m-date" type="date"></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="toolrow">
+    <button class="pillbtn active" id="filterAll">All items</button>
+    <button class="pillbtn" id="filterFlagged">Flagged / N only</button>
+  </div>
+  <div id="sections"></div>
+</div>
+
+<div class="bottombar">
+  <div class="stat"><b id="statDone">0 / 0</b><span>items answered</span></div>
+  <button class="btn-primary" id="btnFinish">Review &amp; finish</button>
+</div>
+
+<div id="reviewOverlay">
+  <div class="review-head">
+    <h2>Inspection Summary</h2>
+    <button class="closebtn" id="btnCloseReview">✕</button>
+  </div>
+  <div class="review-body" id="reviewBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="lightbox">
+  <button class="lb-close" id="lbClose">✕</button>
+  <img id="lbImg" src="" alt="Inspection photo">
+  <div class="lb-cap" id="lbCap"></div>
+</div>
+
+<script>
+/* ---------------- data ---------------- */
+const STC_LOGO = "data:image/png;base64,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pyZl5EbHJ8bIw2tfua+Cd3JYMfy4BKfDdbys8Xh5S0tNT0ttW0dbV1dX74BT57rEuZcoROCNFRAgA4tFiYqLiE2ISMwIS89ITpsenTMzIyLaxkaVJeNJ+zjYrBi6LCfvDEONd7R211R0tDS1NdW0d59wdbR293QN9PYOqKpGBAA6gTYsJdyot2eKSQkPt0VGW6ITrQkp0Ump8WnZSVnZ8VGxNqaw0aPHh//wlWDFoLbh3axodM4nIl3jrn6Pa8Ctq5qq68SJiDNJMimyJElhNqslTEaGyAYDyt6TY7T7iEb9hMNOnwn3rgwO2TbEPifipKp8YMA94HSrqscYqsEYybJiMivh4TaTmTHGBt8/jvYJT5D35zRLOmJRjX3PNSIg14DmdDo1lasq1zQdAGSJySZZUVhYmNUSJjOGRrfPoSsM1y1Pl+uKAWfBftFYISAw1cDEEggICFYICAhWCAgIVggICFYICAhWCAgIVggICFYICAhWCAgIVggICFYICAhWCAgIVggICFYICAhWCAgIVggICFYICAgIVggICFYICAhWCAgIVggICFYICAhWCAgIVggICFYICAhWCAhMafx/GK1YbxL61+IAAAAASUVORK5CYII=";
+const CHECKLIST = [
+  {n:1, title:"General Safety Checks", dept:"SAFETY", items:[
+    "Emergency exits are clearly marked and unobstructed.",
+    "Fire extinguishers are available, properly mounted, and inspected.",
+    "Emergency lighting is functional.",
+    "Stairways and corridors are free from obstructions.",
+    "Safety signage (e.g., fire exits, hazard warnings) is visible and intact.",
+    "First aid kits are available and stocked.",
+    "Floors are dry and free from trip hazards.",
+    "Adequate ventilation in all rooms.",
+    "Ladders and scaffolding (if applicable) are secure and in good condition.",
+    "Fire Alarm panel inside the building free from errors.",
+    "Fire Hose inside the building monthly inspected.",
+    "General Housekeeping is good."
+  ]},
+  {n:2, title:"Office Areas", dept:"BFM", items:[
+    "Workstations are ergonomically set up.",
+    "Electrical cords and wiring are properly managed.",
+    "Fire safety equipment is accessible.",
+    "No overloaded power outlets or daisy-chained extension cords.",
+    "Housekeeping standards are maintained.",
+    "Air conditioning and heating systems are functional.",
+    "Fire hose reels are available and in good condition.",
+    "Sprinkler system available.",
+    "Emergency exit routes are clear and marked.",
+    "Smoke detectors are present and functional.",
+    "Evacuation plan is available and posted."
+  ]},
+  {n:3, title:"Electrical Room", dept:"BFM", items:[
+    "Access is restricted to authorized personnel.",
+    "Proper signage is displayed (e.g., high voltage warning).",
+    "Electrical panels are labeled and free from obstructions.",
+    "No exposed wires or loose connections.",
+    "Circuit breakers are functional and properly labeled.",
+    "PPE is available for maintenance personnel.",
+    "Room is clean and dry, with no combustible storage.",
+    "Fire suppression system is in place and functional.",
+    "Cable management is proper and organized.",
+    "Fire extinguishers are available.",
+    "Ventilation and cooling are adequate.",
+    "No obstruction to exit."
+  ]},
+  {n:4, title:"Data Room", dept:"IT", items:[
+    "Climate control system is functional.",
+    "Equipment is properly grounded.",
+    "Fire suppression system (e.g., FM200) is in place and operational.",
+    "No combustible materials stored inside.",
+    "Server racks are secure and organized.",
+    "Proper cable management to prevent trip hazards.",
+    "Housekeeping and cable management standards are maintained.",
+    "Smoke detectors are present and functional."
+  ]},
+  {n:5, title:"Generator Room", dept:"BFM", items:[
+    "Proper ventilation is ensured.",
+    "Fuel storage is compliant with safety regulations.",
+    "Fire suppression system is functional.",
+    "Regular maintenance records are available.",
+    "No fuel leaks or oil spills.",
+    "Exhaust system is operational and not blocked.",
+    "Noise levels are within permissible limits.",
+    "Condition of generators is satisfactory.",
+    "Ventilation and fire barriers are adequate.",
+    "Fire extinguishers are available.",
+    "Emergency shutdown system is functional."
+  ]},
+  {n:6, title:"Pump Room", dept:"BFM", items:[
+    "Pumps are in good working condition.",
+    "No leaks in pipes or fittings.",
+    "Valves are properly labeled and accessible.",
+    "Fire pumps are tested and maintained as per schedule.",
+    "No trip hazards or obstructions.",
+    "Emergency shut-off switches are functional.",
+    "Power supply to the pump room is adequate.",
+    "Ventilation in the pump room is adequate.",
+    "Housekeeping in the pump room is good.",
+    "Fire suppression system is in place and functional.",
+    "Pressure gauge functionality is confirmed."
+  ]},
+  {n:7, title:"Transformer Room", dept:"BFM", items:[
+    "Insulation condition is satisfactory.",
+    "Cable management is proper and organized.",
+    "Fire suppression systems are in place and functional.",
+    "Fire extinguishers are available.",
+    "Spill containment measures are in place."
+  ]},
+  {n:8, title:"Building-Wide Fire Life Safety Inspection", dept:"SAFETY", items:[
+    "Fire alarm system is operational.",
+    "Sprinkler system is operational.",
+    "Emergency Exit doors are fire rated.",
+    "Fire doors are functioning properly.",
+    "Assembly point is marked and clear."
+  ]}
+];
+
+const DEPARTMENTS = ["None","BFM","IT","SAFETY","SECURITY"];
+
+/* build flat ref ids like 1.1, 1.2 ... */
+CHECKLIST.forEach(sec=>{
+  sec.refs = sec.items.map((_,i)=>`${sec.n}.${i+1}`);
+});
+
+/* ---------------- state ---------------- */
+let state = {
+  meta:{building:"", inspector:"", ref:"", date:""},
+  answers:{}   // ref -> {val:'Y'|'N'|'NA'|null, risk:'None', comment:'', photos:[dataURL,...], department:''}
+};
+CHECKLIST.forEach(sec=>sec.refs.forEach(r=>{
+  state.answers[r] = {val:null, risk:"Low", comment:"", photos:[], department: sec.dept};
+}));
+
+let activeFilter = "all";
+let saveTimer = null;
+
+const $ = sel => document.querySelector(sel);
+const el = (tag, cls, html) => { const e=document.createElement(tag); if(cls) e.className=cls; if(html!==undefined) e.innerHTML=html; return e; };
+
+/* ---------------- render ---------------- */
+function render(){
+  const wrap = $("#sections");
+  wrap.innerHTML = "";
+  CHECKLIST.forEach(sec=>{
+    const answeredCount = sec.refs.filter(r=>state.answers[r].val).length;
+    const hasFail = sec.refs.some(r=>state.answers[r].val==="N");
+    const secEl = el("div","section" + (sec.n===1?" open":""));
+    secEl.dataset.sec = sec.n;
+
+    const head = el("button","section-head");
+    head.innerHTML = `
+      <span class="sec-dot ${answeredCount===0?'dot-pending':(hasFail?'dot-bad':'dot-ok')}"></span>
+      <span class="sec-num">${sec.n}</span>
+      <span class="sec-title">${sec.title}</span>
+      <span class="sec-progress">${answeredCount}/${sec.refs.length}</span>
+      <span class="sec-chevron">▾</span>
+    `;
+    head.onclick = () => { secEl.classList.toggle("open"); };
+    secEl.appendChild(head);
+
+    const body = el("div","sec-body");
+    let visibleCount = 0;
+    sec.items.forEach((text, idx)=>{
+      const ref = sec.refs[idx];
+      const a = state.answers[ref];
+      if(activeFilter === "flagged" && a.val !== "N"){ return; }
+      visibleCount++;
+      body.appendChild(renderItem(ref, text, a));
+    });
+    if(activeFilter === "flagged" && visibleCount === 0){
+      body.appendChild(el("div","item","<div style='color:var(--ink-dim); font-size:13px;'>No flagged items in this section.</div>"));
+    }
+    secEl.appendChild(body);
+    wrap.appendChild(secEl);
+  });
+  updateProgress();
+}
+
+function renderItem(ref, text, a){
+  const item = el("div","item");
+  item.dataset.ref = ref;
+
+  const top = el("div","item-top");
+  top.innerHTML = `<span class="item-ref">${ref}</span><span class="item-text">${text}</span>`;
+  item.appendChild(top);
+
+  const seg = el("div","seg");
+  seg.innerHTML = `
+    <button class="y ${a.val==='Y'?'sel':''}" data-v="Y">Yes</button>
+    <button class="n ${a.val==='N'?'sel':''}" data-v="N">No</button>
+    <button class="na ${a.val==='NA'?'sel':''}" data-v="NA">N/A</button>
+  `;
+  seg.querySelectorAll("button").forEach(btn=>{
+    btn.onclick = () => {
+      a.val = a.val === btn.dataset.v ? null : btn.dataset.v;
+      if(a.val === "Y" || a.val === "NA" || a.val === null){ /* leave risk as-is */ }
+      render();
+      const secEl = document.querySelector(`.section[data-sec="${ref.split('.')[0]}"]`);
+      if(secEl) secEl.classList.add("open");
+    };
+  });
+  item.appendChild(seg);
+
+  const riskRow = el("div","risk-row");
+  const sel = el("select","risk-select r-" + a.risk.toLowerCase());
+  ["None","Low","Medium","High"].forEach(r=>{
+    const opt = el("option","",r); opt.value = r; if(r===a.risk) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.onchange = () => { a.risk = sel.value; sel.className = "risk-select r-" + a.risk.toLowerCase(); };
+  riskRow.innerHTML = `<label>Risk</label>`;
+  riskRow.appendChild(sel);
+  item.appendChild(riskRow);
+
+  const deptRow = el("div","risk-row");
+  const deptSel = el("select","risk-select");
+  DEPARTMENTS.forEach(d=>{
+    const opt = el("option","",d); opt.value = d; if(d === a.department) opt.selected = true;
+    deptSel.appendChild(opt);
+  });
+  deptSel.onchange = () => { a.department = deptSel.value; };
+  deptRow.innerHTML = `<label>Dept</label>`;
+  deptRow.appendChild(deptSel);
+  item.appendChild(deptRow);
+
+  const subrow = el("div","subrow");
+  const commentBtn = el("button","ghostbtn", (a.comment ? "💬 Edit comment" : "💬 Add comment"));
+  commentBtn.type = "button";
+  subrow.appendChild(commentBtn);
+  item.appendChild(subrow);
+
+  const photoWrap = el("div","photo-native-wrap");
+  const photoLabel = el("div","photo-native-label", `📷 Add photo${a.photos.length? " · "+a.photos.length+" attached" : ""}`);
+  const photoInput = el("input","photo-native-input");
+  photoInput.type = "file";
+  photoInput.accept = "image/*";
+  photoInput.multiple = true;
+  photoInput.addEventListener("change", (e)=>{
+    handlePhotoFiles(ref, e.target.files);
+    e.target.value = "";
+  });
+  photoWrap.appendChild(photoLabel);
+  photoWrap.appendChild(photoInput);
+  item.appendChild(photoWrap);
+
+  const ta = el("textarea","comment" + (a.comment? " show":""));
+  ta.placeholder = "Add a comment for this item…";
+  ta.value = a.comment;
+  ta.oninput = () => { a.comment = ta.value; };
+  commentBtn.onclick = () => { ta.classList.toggle("show"); if(ta.classList.contains("show")) ta.focus(); };
+  item.appendChild(ta);
+
+  const strip = el("div","photo-strip");
+  a.photos.forEach((src, pi)=>{
+    const th = el("div","photo-thumb");
+    th.innerHTML = `<img src="${src}"><button class="rm">✕</button>`;
+    th.querySelector("img").onclick = () => openLightbox(src, `${ref} · Photo ${pi+1}`);
+    th.querySelector(".rm").onclick = (ev) => { ev.stopPropagation(); a.photos.splice(pi,1); render(); };
+    strip.appendChild(th);
+  });
+  item.appendChild(strip);
+
+  return item;
+}
+
+function updateProgress(){
+  const all = Object.values(state.answers);
+  const done = all.filter(a=>a.val).length;
+  const total = all.length;
+  $("#statDone").textContent = `${done} / ${total}`;
+  const pct = total? Math.round(done/total*100) : 0;
+  const circumference = 2 * Math.PI * 19;
+  $("#ringFg").setAttribute("stroke-dasharray", `${circumference*pct/100} ${circumference}`);
+  $("#ringLabel").textContent = pct + "%";
+}
+
+/* ---------------- photo capture (compress before storing) ---------------- */
+function handlePhotoFiles(ref, files){
+  files = Array.from(files || []);
+  if(!files.length) return;
+  let remaining = files.length;
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxW = 1600;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        state.answers[ref].photos.push(dataUrl);
+        remaining--;
+        if(remaining === 0){ render(); }
+      };
+      img.onerror = ()=>{ remaining--; toast("Could not read that photo"); };
+      img.src = ev.target.result;
+    };
+    reader.onerror = ()=>{ remaining--; toast("Could not read that photo"); };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------------- meta fields ---------------- */
+["building","inspector","ref","date"].forEach(k=>{
+  const input = $("#m-"+k);
+  input.addEventListener("input", ()=>{ state.meta[k] = input.value; });
+});
+
+/* ---------------- filters ---------------- */
+$("#filterAll").onclick = ()=>{ activeFilter="all"; $("#filterAll").classList.add("active"); $("#filterFlagged").classList.remove("active"); render(); };
+$("#filterFlagged").onclick = ()=>{ activeFilter="flagged"; $("#filterFlagged").classList.add("active"); $("#filterAll").classList.remove("active"); render(); };
+
+/* ---------------- functions used by finish/report ---------------- */
+
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 1800);
+}
+
+/* ---------------- lightbox ---------------- */
+function openLightbox(src, caption){
+  $("#lbImg").src = src;
+  $("#lbCap").textContent = caption || "";
+  $("#lightbox").classList.add("show");
+}
+function closeLightbox(){ $("#lightbox").classList.remove("show"); }
+$("#lbClose").onclick = closeLightbox;
+$("#lightbox").addEventListener("click", (e)=>{ if(e.target.id === "lightbox") closeLightbox(); });
+
+/* ---------------- review / finish : builds stc-format report ---------------- */
+function flagCell(val, target){
+  const on = val === target;
+  const cls = target==="Y"?"on-y":target==="N"?"on-n":"on-na";
+  const mark = target==="Y"?"✓":target==="N"?"✕":"–";
+  return `<td class="rpt-flag">${on ? `<span class="flagmark ${cls}">${mark}</span>` : ""}</td>`;
+}
+
+/* Download a self-contained copy of the report as a plain .html file.
+   Uses only a Blob + anchor-download — no print API, no external
+   libraries, no popups. The most reliable fallback available: it works
+   the same way any website's "download file" button works. The saved
+   file can be opened and printed/shared later from Files. */
+function downloadReportHtml(sheetEl){
+  try{
+    const styleTag = document.querySelector("style");
+    const cssText = styleTag ? styleTag.innerHTML : "";
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Inspection Report</title>
+      <style>${cssText}
+        html,body{background:#fff; margin:0; padding:16px;}
+        .rpt-sheet{box-shadow:none; margin-bottom:0;}
+      </style></head>
+      <body>${sheetEl.outerHTML}</body></html>`;
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const bld = (state.meta.building || "report").trim().replace(/\s+/g,"_");
+    const dt = state.meta.date || "";
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Inspection_${bld}_${dt}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=> URL.revokeObjectURL(url), 4000);
+    toast("Report file downloaded");
+  }catch(err){
+    console.error("Download error", err);
+    toast("Could not download the report");
+  }
+}
+
+
+$("#btnFinish").onclick = ()=>{
+  const body = $("#reviewBody");
+  body.innerHTML = "";
+
+  const all = Object.values(state.answers);
+  const failCount = all.filter(a=>a.val==="N").length;
+  const doneCount = all.filter(a=>a.val).length;
+
+  const stats = el("div","rv-stats");
+  stats.innerHTML = `
+    <div class="rv-stat-card"><b>${doneCount}/${all.length}</b><span>ITEMS ANSWERED</span></div>
+    <div class="rv-stat-card"><b style="color:${failCount? 'var(--bad)':'var(--ok)'};">${failCount}</b><span>NON-CONFORMANCES</span></div>
+  `;
+  body.appendChild(stats);
+
+  const sheet = el("div","rpt-sheet");
+
+  sheet.innerHTML = `
+    <div class="rpt-banner">
+      <div class="rpt-banner-left"><h1>BUILDINGS INSPECTION REPORT</h1></div>
+      <div class="rpt-banner-mid"></div>
+      <div class="rpt-banner-right"><img class="rpt-logo-img" src="${STC_LOGO}" alt="stc logo"></div>
+    </div>
+    <table class="rpt-info">
+      <tr>
+        <td class="lbl">Building Number</td><td class="val">${escapeHtml(state.meta.building) || "—"}</td>
+        <td class="lbl">Inspection Ref No.</td><td class="val">${escapeHtml(state.meta.ref) || "—"}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Inspector Name</td><td class="val">${escapeHtml(state.meta.inspector) || "—"}</td>
+        <td class="lbl">Date of Inspection</td><td class="val">${escapeHtml(state.meta.date) || "—"}</td>
+      </tr>
+    </table>
+  `;
+
+  const table = el("table","rpt-table");
+  table.innerHTML = `<colgroup>
+    <col class="c-ref"><col class="c-desc"><col class="c-flag"><col class="c-flag"><col class="c-flag"><col class="c-risk"><col class="c-dept"><col class="c-comment">
+  </colgroup>`;
+  const tbody = el("tbody");
+
+  CHECKLIST.forEach(sec=>{
+    const secHasContent = sec.refs.some(r=> state.answers[r].val || state.answers[r].comment || state.answers[r].photos.length);
+    const secRow = el("tr","rpt-sec-row");
+    secRow.innerHTML = `<td colspan="8">Ref No:${sec.n}&nbsp;&nbsp;${sec.title}</td>`;
+    tbody.appendChild(secRow);
+
+    const headRow = el("tr","rpt-head-row");
+    headRow.innerHTML = `<td>Ref</td><td class="desc-h">Description</td><td>Y</td><td>N</td><td>NA</td><td>Risk</td><td>Dept</td><td>Comments</td>`;
+    tbody.appendChild(headRow);
+
+    sec.items.forEach((text, idx)=>{
+      const ref = sec.refs[idx];
+      const a = state.answers[ref];
+      const row = el("tr");
+      row.innerHTML = `
+        <td class="rpt-ref">${ref}</td>
+        <td class="rpt-desc">${escapeHtml(text)}</td>
+        ${flagCell(a.val,"Y")}
+        ${flagCell(a.val,"N")}
+        ${flagCell(a.val,"NA")}
+        <td class="rpt-risk risk-${a.risk}">${a.risk}</td>
+        <td class="rpt-dept">${escapeHtml(a.department)}</td>
+        <td class="rpt-comment">${escapeHtml(a.comment) || ""}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  });
+  table.appendChild(tbody);
+  sheet.appendChild(table);
+
+  // Photo appendix: every photo, full size, grouped in ref order, with observation + comment
+  const allPhotoRefs = [];
+  CHECKLIST.forEach(sec=> sec.refs.forEach(ref=>{
+    const a = state.answers[ref];
+    if(a.photos.length) allPhotoRefs.push({ref, a});
+  }));
+  if(allPhotoRefs.length){
+    const appxTitle = el("div","rpt-appendix-title", `Photo Appendix — ${allPhotoRefs.reduce((n,x)=>n+x.a.photos.length,0)} photo(s)`);
+    sheet.appendChild(appxTitle);
+    const grid = el("div","rpt-appendix-grid");
+    allPhotoRefs.forEach(({ref,a})=>{
+      a.photos.forEach((src,pi)=>{
+        const blk = el("div","rpt-appx-block");
+        blk.innerHTML = `
+          <img src="${src}">
+          <div class="cap">${ref}</div>
+          ${a.comment ? `<div class="cmt">${escapeHtml(a.comment)}</div>` : ""}
+        `;
+        blk.querySelector("img").onclick = () => openLightbox(src, `${ref} · Photo ${pi+1}`);
+        grid.appendChild(blk);
+      });
+    });
+    sheet.appendChild(grid);
+  }
+
+  const footer = el("div","rpt-footer","Internal &middot; stc Safety Management Department");
+  sheet.appendChild(footer);
+
+  body.appendChild(sheet);
+
+  const helpNote = el("div","rv-help-note",
+    "<b>Print</b> opens your device's print dialog directly. If that doesn't respond, use <b>Download Report</b> to save the file, then open it and print/share from there.");
+  body.appendChild(helpNote);
+
+  const actions = el("div","rv-actions");
+  const printBtn = el("button","btn-primary","🖨 Print / Save as PDF");
+  printBtn.style.flex="1";
+  printBtn.type="button";
+  printBtn.onclick = ()=> window.print();
+  const downloadBtn = el("button","btn-secondary","⬇ Download Report");
+  downloadBtn.style.flex="1";
+  downloadBtn.type="button";
+  downloadBtn.onclick = ()=> downloadReportHtml(sheet);
+  const backBtn = el("button","btn-secondary","Back to checklist");
+  backBtn.style.flex="1";
+  backBtn.type="button";
+  backBtn.onclick = closeReview;
+  actions.appendChild(printBtn);
+  actions.appendChild(downloadBtn);
+  actions.appendChild(backBtn);
+  body.appendChild(actions);
+
+  $("#reviewOverlay").classList.add("show");
+};
+function escapeHtml(str){
+  if(!str) return "";
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function closeReview(){ $("#reviewOverlay").classList.remove("show"); }
+$("#btnCloseReview").onclick = closeReview;
+
+/* ---------------- init ---------------- */
+function boot(){
+  try{
+    const today = new Date().toISOString().slice(0,10);
+    $("#m-date").value = today;
+    state.meta.date = today;
+    render();
+  }catch(err){
+    console.error("Init error", err);
+    document.body.insertAdjacentHTML("afterbegin",
+      '<div style="background:#D64545;color:#fff;padding:12px 16px;font-size:13px;font-weight:600;">'+
+      'This page needs to run in a full browser. Tap Share → Open in Safari (or your browser) instead of the quick preview.</div>');
+  }
+}
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", boot);
+}else{
+  boot();
+}
+</script>
+</body>
+</html>
