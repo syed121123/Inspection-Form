@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="light only">
 <title>stc Buildings Inspection</title>
 <style>
   :root{
+    color-scheme: light only;
     --purple-950:#2A0F45;
     --purple-800:#3D1A5B;
     --purple-700:#4C2172;
@@ -238,7 +240,7 @@
   }
 
   @media print{
-    .topbar,.bottombar,.closebtn,.rv-actions,.review-head,.rv-help-note,.wrap{display:none !important;}
+    .topbar,.bottombar,.closebtn,.rv-actions,.review-head,.rv-help-note,.wrap,.rv-stats{display:none !important;}
     #reviewOverlay{position:static; overflow:visible; background:#fff;}
     .review-body{padding:0; max-width:100%;}
     body{background:#fff;}
@@ -663,6 +665,7 @@ function downloadReportHtml(sheetEl){
     const cssText = styleTag ? styleTag.innerHTML : "";
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="color-scheme" content="light only">
       <title>Inspection Report</title>
       <style>${cssText}
         html,body{background:#fff; margin:0; padding:16px;}
